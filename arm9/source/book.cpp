@@ -2,7 +2,6 @@
 #include "screens.h"
 #include "renderer.h"
 #include "controls.h"
-#include "encoding_tables.h"
 #include "utf8.h"
 #include <fstream>
 
@@ -251,6 +250,46 @@ int lineScrollBackwardKey()
 
 }
 
+void Book :: clearParagraphCache()
+{
+	for(u32 i = 0; i < paragraphCache.size(); ++i)
+		paragraphCache[i].valid = false;
+	prev_par_num = 1 << 30;
+}
+
+bool Book :: tryLoadCachedParagraph(u32 parag_num)
+{
+	for(u32 i = 0; i < paragraphCache.size(); ++i) {
+		ParagraphCacheEntry& entry = paragraphCache[i];
+		if(!entry.valid || entry.parag_num != parag_num) continue;
+		parag = entry.value;
+		entry.stamp = paragraphCacheStamp++;
+		prev_par_num = parag_num;
+		return true;
+	}
+	return false;
+}
+
+void Book :: storeCachedParagraph(u32 parag_num)
+{
+	if(paragraphCache.empty()) return;
+
+	ParagraphCacheEntry* slot = &paragraphCache[0];
+	for(u32 i = 0; i < paragraphCache.size(); ++i) {
+		ParagraphCacheEntry& entry = paragraphCache[i];
+		if(!entry.valid) {
+			slot = &entry;
+			break;
+		}
+		if(entry.stamp < slot->stamp) slot = &entry;
+	}
+
+	slot->valid = true;
+	slot->parag_num = parag_num;
+	slot->stamp = paragraphCacheStamp++;
+	slot->value = parag;
+}
+
 void Book :: queueMarksSave()
 {
 	marksDirty = true;
@@ -280,11 +319,14 @@ void Book :: read()
 	renderer::clearScreens(settings::bgCol);
 	parse();
 	if(0 == total_paragraths()) return;
+	clearParagraphCache();
 	loadMarks();
 	consoleClear();
 	draw_page();
-	settings::recent_book = bookFile;
-	settings::save();
+	if(settings::recent_book != bookFile) {
+		settings::recent_book = bookFile;
+		settings::save();
+	}
 	otherGrid = false;
 
 	touchPosition t1, t2;
@@ -780,6 +822,8 @@ bool Book :: menu()
 {
 	drawMenu(false);
 	bool running = true;
+	bool settingsDirty = false;
+	bool exitBook = false;
 	while((running = pumpPowerManagement())) {
 		swiWaitForVBlank();
 		scanKeys();
@@ -795,13 +839,23 @@ bool Book :: menu()
 			if(i > d270) i = d0;
 			current_page.line_num = 0;
 			settings::layout = Layout(i);
+			clearParagraphCache();
 			drawMenu();
+			settingsDirty = true;
 		}
-		else if(SAY(close) == t) return true;
-		else if(SAY(light) == t) cycleBacklight();
+		else if(SAY(close) == t) {
+			exitBook = true;
+			break;
+		}
+		else if(SAY(light) == t) {
+			cycleBacklight();
+			settingsDirty = true;
+		}
 		else if(SAY(invert) == t) {
 			settings::setLowLightMode(!settings::lowLightMode());
+			clearParagraphCache();
 			drawMenu(false);
+			settingsDirty = true;
 		}
 		else if(SAY(screens) == t) {
 			int i = settings::scrConf;
@@ -809,6 +863,7 @@ bool Book :: menu()
 			if(i > scBoth) i = scTop;
 			settings::scrConf  = scrConfig(i);
 			drawMenu(false);
+			settingsDirty = true;
 			string o;
 			switch(settings::scrConf) {
 				case scTop: o = *SAY(top); break;
@@ -817,22 +872,20 @@ bool Book :: menu()
 			}
 			menuGrid.print(SAY(screens), o);
 		}
-		else if(SAY(codep) == t) {
-			code_page();
-			if(appShouldExit()) return true;
-			current_page.line_num = 0;
-			drawMenu();
-		}
 		else if(SAY(font) == t) {
 			renderer::changeFont();
 			current_page.line_num = 0;
+			clearParagraphCache();
 			drawMenu();
+			settingsDirty = true;
 			menuGrid.print(SAY(font), settings::font);
 		}
 		else if(SAY(colors) == t) {
 			settings::setNightMode(!settings::nightMode());
 			current_page.line_num = 0;
-			drawMenu();
+			clearParagraphCache();
+			drawMenu(false);
+			settingsDirty = true;
 		}
 		else if(SAY(style) == t) {
 			using settings::tech;
@@ -843,7 +896,8 @@ bool Book :: menu()
 				case phone:		tech = linux;	break; default: ;
 			}
 			current_page.line_num = 0;
-			drawMenu();
+			drawMenu(false);
+			settingsDirty = true;
 		}
 		else if(SAY(sharp) == t) {
 			sharpness();
@@ -853,10 +907,12 @@ bool Book :: menu()
 		else if(SAY(pbar) == t) {
 			settings::pbar = !settings::pbar;
 			drawMenu(false);
+			settingsDirty = true;
 		}
 		else if(SAY(justify) == t) {
 			settings::justify = !settings::justify;
 			drawMenu(false);
+			settingsDirty = true;
 		}
 		else if(SAY(size) == t) {
 			using settings::font_size;
@@ -865,7 +921,9 @@ bool Book :: menu()
 			clamp(font_size, 8, 24);
 			if(old == font_size) continue;
 			current_page.line_num = 0;
+			clearParagraphCache();
 			drawMenu();
+			settingsDirty = true;
 			char buf[5];
 			sprintf(buf, "%d", settings::font_size);
 			menuGrid.print(SAY(size), string(buf));
@@ -877,6 +935,7 @@ bool Book :: menu()
 			clamp(gamma, 0, 2);
 			if(old == gamma) continue;
 			drawMenu(false);
+			settingsDirty = true;
 		}
 		else if(SAY(gap) == t) {
 			using settings::line_gap;
@@ -884,7 +943,9 @@ bool Book :: menu()
 			line_gap += (rLeft == menuGrid.val) ? -1: 1;
 			clamp(line_gap, 0, 15);
 			if(old == line_gap) continue;
+			clearParagraphCache();
 			drawMenu(false);
+			settingsDirty = true;
 		}
 		else if(SAY(indent) == t) {
 			using settings::first_indent;
@@ -892,17 +953,20 @@ bool Book :: menu()
 			first_indent += (rLeft == menuGrid.val) ? -1: 1;
 			clamp(first_indent, 0, 50);
 			if(old == first_indent) continue;
+			clearParagraphCache();
 			drawMenu();
+			settingsDirty = true;
 		}
 		else if(SAY(language) == t) {
 			translation();
 			if(appShouldExit()) return true;
-			drawMenu();
+			drawMenu(false);
+			settingsDirty = true;
 		}
 	}
-	settings::save();
+	if(settingsDirty) settings::save();
 	renderer::clearScreens(settings::bgCol);
-	return !running;
+	return exitBook || !running;
 }
 
 void Book :: drawMenu(bool recache)
@@ -924,7 +988,6 @@ void Book :: drawMenu(bool recache)
 	->push(SAY(indent), 0 , true)	
 	->push(SAY(colors))
 	->push(SAY(sharp))
-	->push(SAY(codep))
 	->push(SAY(language));
 	draw_page(true, recache);
 	renderer::clearScreens(settings::bgCol, bottom_scr);
@@ -998,14 +1061,6 @@ string fileReq(const string& path)
 			}
 	}
 	return string();
-}
-
-void Book :: code_page()
-{
-	string f = fileReq(encPath);
-	if(f.empty()) return;
-	settings::encname = f;
-	loadEnc((encPath + f).c_str());
 }
 
 void Book :: translation()

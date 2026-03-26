@@ -51,7 +51,7 @@ class Book
 {
 public:
 	void read();
-	Book(const string& filename) : bookFile(filename), menuGrid(0) { 
+	Book(const string& filename) : bookFile(filename), paragraphCacheStamp(1), menuGrid(0) { 
 		current_page.parag_num = 0;
 		current_page.line_num = 0;
 		prev_par_num = 1 << 30;
@@ -65,6 +65,7 @@ public:
 		bookmarkCursor = 0;
 		marksDirty = false;
 		marksSaveFrames = 0;
+		paragraphCache.resize(6);
 	}
 protected:
 	string bookFile, encname;
@@ -75,9 +76,11 @@ protected:
 	virtual void parse() = 0;
 	virtual void parag_str (int parag_num) = 0;
 	void fetch_paragrath (int parag_num) {
+		if(tryLoadCachedParagraph(parag_num)) return;
 		parag_str (parag_num);
 		parsePar();
 		prev_par_num = parag_num;
+		storeCachedParagraph(parag_num);
 	}
 	u32 prev_par_num;
 	void parsePar();
@@ -87,6 +90,18 @@ protected:
 	paragrath parag;
 	Encoding encoding;
 private:
+	struct ParagraphCacheEntry
+	{
+		bool valid;
+		u32 parag_num;
+		u32 stamp;
+		paragrath value;
+		ParagraphCacheEntry() : valid(false), parag_num(0), stamp(0) {}
+	};
+
+	void clearParagraphCache();
+	bool tryLoadCachedParagraph(u32 parag_num);
+	void storeCachedParagraph(u32 parag_num);
 	enum bookmark_view {bookmarkViewMarks, bookmarkViewContents};
 	void next_page(), previous_page(), draw_page(bool onlyTop = false, bool cachePar = true);
 	void next_line(), previous_line();
@@ -112,6 +127,8 @@ private:
 	u32 bookmarkScroll, tocScroll, bookmarkVisible, bookmarkCursor;
 	bool marksDirty;
 	int marksSaveFrames;
+	vector<ParagraphCacheEntry> paragraphCache;
+	u32 paragraphCacheStamp;
 	bool moreNew() {return !bookmarks.empty() && current_page < *bookmarks.rbegin();}
 	bool moreOld() {return !bookmarks.empty() && *bookmarks.begin()  < current_page;}
 	
@@ -121,5 +138,5 @@ private:
 	bool otherGrid;
 	void colorPicker(), sharpness(), search();
 	
-	void loadMarks(), saveMarks(), code_page(), translation();
+	void loadMarks(), saveMarks(), translation();
 };

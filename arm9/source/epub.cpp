@@ -18,10 +18,43 @@ extern "C" {
 namespace
 {
 
-bool loadFromZip(unzFile& zip, const string& file, char *&buf, u32& size, bool fatal = true)
+typedef std::map<string, unz_file_pos> zip_index_map;
+const u32 kOpenProgressUpdateStep = 8u;
+
+bool buildZipIndex(unzFile zip, zip_index_map& index)
+{
+	index.clear();
+	if(unzGoToFirstFile(zip) != UNZ_OK) return false;
+
+	do {
+		char name[512];
+		if(unzGetCurrentFileInfo(zip, NULL, name, sizeof(name), NULL, 0, NULL, 0) != UNZ_OK)
+			continue;
+
+		unz_file_pos pos;
+		if(unzGetFilePos(zip, &pos) != UNZ_OK) continue;
+		index[name] = pos;
+	} while(unzGoToNextFile(zip) == UNZ_OK);
+
+	return !index.empty();
+}
+
+bool locateZipEntry(unzFile zip, const string& file, const zip_index_map* index)
+{
+	if(index != NULL) {
+		zip_index_map::const_iterator it = index->find(file);
+		if(it != index->end()) {
+			unz_file_pos pos = it->second;
+			return unzGoToFilePos(zip, &pos) == UNZ_OK;
+		}
+	}
+	return unzLocateFile(zip, file.c_str(), 0) == UNZ_OK;
+}
+
+bool loadFromZip(unzFile& zip, const string& file, char *&buf, u32& size, bool fatal = true, const zip_index_map* index = NULL)
 {
 	unz_file_info info;
-	if(unzLocateFile(zip, file.c_str(), 0) != UNZ_OK) {
+	if(!locateZipEntry(zip, file, index)) {
 		if(fatal) bsod("epub.loadFromZip:Can't locate file.");
 		return false;
 	}
@@ -221,11 +254,11 @@ bool collectHtmlTocNav(const pugi::xml_node& node, const string& base, vector<to
 	return false;
 }
 
-bool loadHtmlTocLinks(unzFile& zip, const string& toc_file, vector<toc_link>& out)
+bool loadHtmlTocLinks(unzFile& zip, const string& toc_file, vector<toc_link>& out, const zip_index_map* index)
 {
 	char* buf = NULL;
 	u32 size = 0;
-	if(!loadFromZip(zip, toc_file, buf, size, false) || NULL == buf) return false;
+	if(!loadFromZip(zip, toc_file, buf, size, false, index) || NULL == buf) return false;
 
 	pugi::xml_document doc;
 	const pugi::xml_parse_result result = doc.load_buffer_inplace(buf, size);
@@ -251,11 +284,11 @@ void collectNcxNavPoints(const pugi::xml_node& node, const string& base, vector<
 	}
 }
 
-bool loadNcxTocLinks(unzFile& zip, const string& toc_file, vector<toc_link>& out)
+bool loadNcxTocLinks(unzFile& zip, const string& toc_file, vector<toc_link>& out, const zip_index_map* index)
 {
 	char* buf = NULL;
 	u32 size = 0;
-	if(!loadFromZip(zip, toc_file, buf, size, false) || NULL == buf) return false;
+	if(!loadFromZip(zip, toc_file, buf, size, false, index) || NULL == buf) return false;
 
 	pugi::xml_document doc;
 	const pugi::xml_parse_result result = doc.load_buffer_inplace(buf, size);
@@ -429,6 +462,7 @@ void epub_book :: parse()
 	tocReady = false;
 	chapter_targets.clear();
 	anchor_targets.clear();
+	zip_index.clear();
 	document.reset();
 	pugi::xml_node book = document.append_child("book");
 	const char err[] = "epub_book::parse:Can't load epub.";
@@ -437,9 +471,10 @@ void epub_book :: parse()
 	u32 size = 0;
 	unzFile hArchiveFile = unzOpen(bookFile.c_str());
 	if (hArchiveFile == NULL) bsod("epub_book::parse:Can't open epub.");
+	buildZipIndex(hArchiveFile, zip_index);
 
 	pugi::xml_document doc;
-	if(!loadFromZip(hArchiveFile, "META-INF/container.xml", buf, size)) bsod(err);
+	if(!loadFromZip(hArchiveFile, "META-INF/container.xml", buf, size, true, &zip_index)) bsod(err);
 	pugi::xml_parse_result result = doc.load_buffer_inplace(buf, size);
 	if(result.status != pugi::status_ok) bsod(err);
 	string cont_path = doc.child("container").child("rootfiles").child("rootfile").attribute("full-path").value();
@@ -448,7 +483,7 @@ void epub_book :: parse()
 
 	const string opf_dir = dirName(cont_path);
 	doc.reset();
-	if(!loadFromZip(hArchiveFile, cont_path, buf, size)) bsod(err);
+	if(!loadFromZip(hArchiveFile, cont_path, buf, size, true, &zip_index)) bsod(err);
 	result = doc.load_buffer_inplace(buf, size);
 	if(result.status != pugi::status_ok) bsod(err);
 
@@ -486,9 +521,11 @@ void epub_book :: parse()
 
 	renderer::clearScreens(0);
 	for(u32 i = 0; i < chapter_files.size(); ++i) {
-		consoleClear();
-		iprintf("unpacking %lu/%d\n", i + 1, chapter_files.size());
-		if(!loadFromZip(hArchiveFile, chapter_files[i], buf, size)) bsod(err);
+		if(i == 0 || i + 1u == chapter_files.size() || 0 == (i % kOpenProgressUpdateStep)) {
+			consoleClear();
+			iprintf("unpacking %lu/%d\n", i + 1, chapter_files.size());
+		}
+		if(!loadFromZip(hArchiveFile, chapter_files[i], buf, size, true, &zip_index)) bsod(err);
 
 		pugi::xml_document chapter_doc;
 		result = chapter_doc.load_buffer_inplace(buf, size);
@@ -518,8 +555,8 @@ void epub_book :: parse()
 	vector<toc_link> toc_links;
 	unzFile tocZip = unzOpen(bookFile.c_str());
 	if(tocZip) {
-		if(!nav_file.empty()) loadHtmlTocLinks(tocZip, nav_file, toc_links);
-		if(toc_links.empty() && !ncx_file.empty()) loadNcxTocLinks(tocZip, ncx_file, toc_links);
+		if(!nav_file.empty()) loadHtmlTocLinks(tocZip, nav_file, toc_links, &zip_index);
+		if(toc_links.empty() && !ncx_file.empty()) loadNcxTocLinks(tocZip, ncx_file, toc_links, &zip_index);
 		unzClose(tocZip);
 	}
 	for(u32 i = 0; i < toc_links.size(); ++i) {
@@ -564,7 +601,7 @@ bool epub_book :: load_image(const string& zip_path)
 	u32 size = 0;
 	unzFile hArchiveFile = unzOpen(bookFile.c_str());
 	if(hArchiveFile == NULL) return false;
-	const bool loaded = loadFromZip(hArchiveFile, zip_path, buf, size, false);
+	const bool loaded = loadFromZip(hArchiveFile, zip_path, buf, size, false, &zip_index);
 	unzClose(hArchiveFile);
 	if(!loaded || NULL == buf) return false;
 

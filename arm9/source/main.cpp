@@ -6,7 +6,6 @@
 #include <sys/dir.h>
 #include <fstream>
 #include <stdio.h>
-#include "encoding_tables.h"
 
 #include <nds.h>
 #include <filesystem.h>
@@ -117,8 +116,6 @@ int main(int argc, char *argv[])
 	iprintf("loading fonts... ");
 	renderer::initFonts();
 	consoleClear();
-	string enc = encPath + settings::encname;
-	if(file_ok(enc)) loadEnc(enc.c_str());
 	string trans = transPath + settings::translname;
 	if(file_ok(trans)) loadTrans(trans);
 	consoleClear();

@@ -1,5 +1,6 @@
 #include "book.h"
 #include "pugixml.h"
+#include "unzip.h"
 #include <map>
 
 struct epub_entry
@@ -29,4 +30,5 @@ private:
 	pugi::xml_document document;
 	std::map<string, u32> chapter_targets;
 	std::map<string, u32> anchor_targets;
+	std::map<string, unz_file_pos> zip_index;
 };
