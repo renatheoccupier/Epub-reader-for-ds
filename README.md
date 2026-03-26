@@ -110,7 +110,7 @@ You need a working devkitPro / devkitARM setup with the Nintendo DS build tools 
 
 - [awkitsune](https://github.com/awkitsune) / Vladimir Kosickij for the modern IkuReader update this project builds on
 - Chintoi for the original IkuReader codebase
-- [renatheoccupier](https://github.com/renatheoccupier) for this EPUB-focused modification
+- [renatheoccupier](https://github.com/renatheoccupier)
 
 Reference sources for credit:
 
