@@ -34,9 +34,11 @@ This repo includes a few optimizations to reduce lag:
 
 ### DSi
 
-<img src="images/dsi/browserfile2.jpg" alt="File browser on DSi" width="220">
-<img src="images/dsi/bookmark.jpg" alt="Bookmarks on DSi" width="220">
-<img src="images/dsi/content.jpg" alt="Contents on DSi" width="220">
+<p align="left">
+  <img src="images/dsi/browserfile2.jpg" alt="File browser on DSi" width="220">
+  <img src="images/dsi/bookmark.jpg" alt="Bookmarks on DSi" width="220">
+  <img src="images/dsi/content.jpg" alt="Contents on DSi" width="220">
+</p>
 
 ## Quick Start
 
