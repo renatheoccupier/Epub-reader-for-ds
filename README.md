@@ -63,7 +63,7 @@ This repo includes a few optimizations to reduce lag:
 > - `DroidSerifB.ttf`
 > - `DroidSerifI.ttf`
 >
-> The helper scripts in `tools/` can also be useful for preparing large EPUB files.
+> The helper scripts in `tools.zip`can also be useful for preparing large EPUB files (you can use `python3 <tool.py> --help` for more information and usage), i highly recommend using small epub hmm it best if small than 1mb (it can load up to 3mb file but make quite long time) oh and same with images in epub file adjust it to suit with ds, dsi screen and resolution(cause even you keep image in default it still look bad as fk in ds, dsi and make your device load it quite long :> )
 
 ## Controls
 
