@@ -25,6 +25,14 @@ This repo now includes a few performance-focused changes:
 - Recent browser previews are cached, so revisiting the same book is faster
 - EPUB image decoding now reuses the opened archive and caches recent decoded images
 - Re-opening pages after some settings changes is smoother, especially in image-heavy books
+- Here is some preview image in DS(simulator):
+![[./images/ds/file_browser3.png]]
+![[./images/ds/bookmark1.png]]
+![[./images/ds/content1.png]]
+- Here is some preview image in DSI(my DSI):
+![[./images/dsi/browserfile2.jpg]]
+![[./images/dsi/bookmark.jpg]]
+![[./images/dsi/content.jpg]]
 
 ## Quick Start
 
