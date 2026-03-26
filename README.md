@@ -28,15 +28,15 @@ This repo includes a few optimizations to reduce lag:
 
 ### DS / Emulator
 
-![File browser on DS emulator](images/ds/file_browser3.png)
-![Bookmarks on DS emulator](images/ds/bookmark1.png)
-![Contents on DS emulator](images/ds/content1.png)
+- [File browser on DS emulator](images/ds/file_browser3.png)
+- [Bookmarks on DS emulator](images/ds/bookmark1.png)
+- [Contents on DS emulator](images/ds/content1.png)
 
 ### DSi
 
-![File browser on DSi](images/dsi/browserfile2.jpg)
-![Bookmarks on DSi](images/dsi/bookmark.jpg)
-![Contents on DSi](images/dsi/content.jpg)
+<img src="images/dsi/browserfile2.jpg" alt="File browser on DSi" width="220">
+<img src="images/dsi/bookmark.jpg" alt="Bookmarks on DSi" width="220">
+<img src="images/dsi/content.jpg" alt="Contents on DSi" width="220">
 
 ## Quick Start
 
