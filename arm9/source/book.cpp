@@ -239,13 +239,18 @@ string progressLabel(u32 parag_num, u32 total)
 
 int lineScrollForwardKey()
 {
-	// In portrait mode with the D-pad at the top (d90), the upper shoulder is L.
-	return (settings::layout == d90) ? KEY_L : KEY_R;
+	switch(settings::layout) {
+		case d90:
+		case d180:
+			return KEY_L;
+		default:
+			return KEY_R;
+	}
 }
 
 int lineScrollBackwardKey()
 {
-	return (settings::layout == d90) ? KEY_R : KEY_L;
+	return (lineScrollForwardKey() == KEY_L) ? KEY_R : KEY_L;
 }
 
 }
@@ -486,7 +491,9 @@ void Book :: previous_line()
 
 void Book :: draw_page(bool onlyTop, bool cachePar)
 {
-	setBacklightMode(onlyTop ? blBoth : blReading);
+	const backlightMode mode = (onlyTop && settings::scrConf == scTop) ? blReading
+		: (onlyTop ? blBoth : blReading);
+	setBacklightMode(mode);
 	
 	int line_num = current_page.line_num;
 	u32 lines_total = screens::capacity(onlyTop || settings::scrConf != scBoth);

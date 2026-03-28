@@ -125,6 +125,7 @@ void Book :: colorPicker()
 	colToP_sv(settings::fCol, fon);
 	renderer::clearScreens(settings::bgCol, bottom_scr);
 	fon.draw(); bg.draw(); ok.draw();
+	setBacklightMode(blOverlay);
 	
 	while(pumpPowerManagement()) {
 		swiWaitForVBlank();
@@ -139,6 +140,7 @@ void Book :: colorPicker()
 			draw_page(true, false);
 			renderer::clearScreens(settings::bgCol, bottom_scr);
 			fon.draw(); bg.draw(); ok.draw();
+			setBacklightMode(blOverlay);
 		}
 		else if(fon.b2.touched()) { //h
 			touchPosition t1;
@@ -149,6 +151,7 @@ void Book :: colorPicker()
 			draw_page(true, false);
 			renderer::clearScreens(settings::bgCol, bottom_scr);
 			fon.draw(); bg.draw(); ok.draw();
+			setBacklightMode(blOverlay);
 		}
 		else if(bg.b.touched()) { //s,v
 			touchPosition t1;
@@ -158,6 +161,7 @@ void Book :: colorPicker()
 			draw_page(true, false);
 			renderer::clearScreens(settings::bgCol, bottom_scr);
 			fon.draw(); bg.draw(); ok.draw();
+			setBacklightMode(blOverlay);
 		}
 		else if(bg.b2.touched()) { //h
 			touchPosition t1;
@@ -168,6 +172,7 @@ void Book :: colorPicker()
 			draw_page(true, false);
 			renderer::clearScreens(settings::bgCol, bottom_scr);
 			fon.draw(); bg.draw(); ok.draw();
+			setBacklightMode(blOverlay);
 		}
 	}
 	if(appShouldExit()) return;
@@ -187,6 +192,7 @@ void Book :: sharpness()
 		b[i].txt = titles[i];
 		b[i].draw();
 	}
+	setBacklightMode(blOverlay);
 	while(pumpPowerManagement()) {
 		swiWaitForVBlank();
 		scanKeys();
@@ -204,6 +210,7 @@ void Book :: sharpness()
 				draw_page(true, false);
 				renderer::clearScreens(settings::bgCol, bottom_scr);
 				for(int i = 0; i < 5; i++) b[i].draw();
+				setBacklightMode(blOverlay);
 				continue;
 			}
 		}

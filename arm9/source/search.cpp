@@ -55,6 +55,7 @@ void Book :: search()
 	current_page.line_num = 0;
 	draw_page(true);
 	renderer::clearScreens(0, bottom_scr);
+	setBacklightMode(blOverlay);
 	print_serarch();
 	keyboardShow();
 	string searchstr;
@@ -82,6 +83,7 @@ void Book :: search()
 						current_page.line_num = 0;
 						queueMarksSave();
 						draw_page(true);
+						setBacklightMode(blOverlay);
 						break;
 					}
 				}
@@ -102,6 +104,7 @@ void Book :: search()
 						current_page.line_num = 0;
 						queueMarksSave();
 						draw_page(true);
+						setBacklightMode(blOverlay);
 						break;
 					}
 				}
