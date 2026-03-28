@@ -1,4 +1,4 @@
-# IkuReader 6.5 Modern EPUB Mod
+# IkuReader Modern EPUB Mod
 
 This project is an EPUB-focused Nintendo DS/DSi build of IkuReader.
 
